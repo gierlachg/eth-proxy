@@ -8,9 +8,6 @@ use crate::etherscan::Etherscan;
 mod config;
 mod etherscan;
 
-type BlockNumber = u64;
-type BlockTime = u64;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let config = Config::init();
@@ -42,8 +39,14 @@ async fn current_block_time(context: web::Data<Etherscan>) -> HttpResponse {
     }
 }
 
+#[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Serialize)]
+struct BlockNumber(u64);
+
+#[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Serialize)]
+struct BlockTime(u64);
+
 #[derive(Serialize, Debug)]
-pub struct CurrentBlockTime {
+struct CurrentBlockTime {
     block_number: BlockNumber,
     timestamp: BlockTime,
 }

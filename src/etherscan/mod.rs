@@ -38,7 +38,7 @@ impl Etherscan {
 
     pub(super) async fn block_time(&self, block_number: BlockNumber) -> Result<BlockTime, InvocationFailure> {
         self.get(&format!(
-            "https://{}/api?module=block&action=getblockreward&blockno={}&apikey={}",
+            "https://{}/api?module=block&action=getblockreward&blockno={:?}&apikey={}",
             self.domain, block_number, self.api_key
         ))
         .await
@@ -68,7 +68,9 @@ impl<'a> TryInto<BlockNumber> for EtherscanBlockNumber<'a> {
 
     fn try_into(self) -> Result<BlockNumber, Self::Error> {
         if self.status.is_none() {
-            BlockNumber::from_str_radix(self.result.trim_start_matches("0x"), 16).map_err(ParseIntError::into)
+            u64::from_str_radix(self.result.trim_start_matches("0x"), 16)
+                .map(|block_number| BlockNumber(block_number))
+                .map_err(ParseIntError::into)
         } else {
             Err(InvocationFailure::failure(self.result))
         }
@@ -116,7 +118,8 @@ impl<'a> TryInto<BlockTime> for EtherscanBlockReward<'a> {
                     .timestamp
                     .map_or(Err(InvocationFailure::failure(success.message)), |timestamp| {
                         timestamp
-                            .parse::<BlockTime>()
+                            .parse::<u64>()
+                            .map(|block_time| BlockTime(block_time))
                             .map_err(|e| InvocationFailure::failure(&e.to_string()))
                     })
             }
@@ -145,7 +148,7 @@ mod tests {
             status: None,
             result: "0x01ab",
         };
-        assert_eq!(block_number.try_into(), Ok(427));
+        assert_eq!(block_number.try_into(), Ok(BlockNumber(427)));
     }
 
     #[test]
@@ -189,7 +192,7 @@ mod tests {
             },
         });
         let result: Result<BlockTime, InvocationFailure> = block_time.try_into();
-        assert_eq!(result, Ok(123456789));
+        assert_eq!(result, Ok(BlockTime(123456789)));
     }
 
     #[test]
